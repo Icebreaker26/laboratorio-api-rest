@@ -1,6 +1,13 @@
 const express = require('express');
+const { Pool } = require('pg');
+
 const app = express();
 const PORT = 5000;
+
+// Reto adicional: conexión a PostgreSQL real en lugar de memoria RAM
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/laboratorio_api',
+});
 
 app.use(express.json()); // Habilita la lectura de JSON en el cuerpo (body) de las peticiones
 
@@ -18,34 +25,31 @@ app.use((req, res, next) => {
   next();
 });
 
-// Simulación de Base de Datos en memoria
-let tareas = [
-  { id: 1, texto: "Aprender conceptos básicos de Docker" },
-  { id: 2, texto: "Desplegar mi primer arquitectura de Microservicios" }
-];
-
 // [GET] Obtener la lista completa de tareas
-app.get('/api/tareas', (req, res) => {
-  res.json(tareas);
+app.get('/api/tareas', async (req, res) => {
+  const { rows } = await pool.query('SELECT id, texto FROM tareas ORDER BY id');
+  res.json(rows);
 });
 
 // [POST] Crear una nueva tarea
-app.post('/api/tareas', (req, res) => {
-  const nuevaTarea = { id: Date.now(), texto: req.body.texto };
-  tareas.push(nuevaTarea);
-  res.status(201).json(nuevaTarea);
+app.post('/api/tareas', async (req, res) => {
+  const { rows } = await pool.query(
+    'INSERT INTO tareas (texto) VALUES ($1) RETURNING id, texto',
+    [req.body.texto]
+  );
+  res.status(201).json(rows[0]);
 });
 
 // [DELETE] Vaciar la lista completa de tareas (Reto Calificable)
-app.delete('/api/tareas/limpiar', (req, res) => {
-  tareas = [];
+app.delete('/api/tareas/limpiar', async (req, res) => {
+  await pool.query('TRUNCATE TABLE tareas RESTART IDENTITY');
   res.json({ mensaje: "Lista de tareas vaciada correctamente" });
 });
 
 // [DELETE] Eliminar una tarea específica mediante su ID en la URL
-app.delete('/api/tareas/:id', (req, res) => {
+app.delete('/api/tareas/:id', async (req, res) => {
   const idEliminar = parseInt(req.params.id);
-  tareas = tareas.filter(t => t.id !== idEliminar);
+  await pool.query('DELETE FROM tareas WHERE id = $1', [idEliminar]);
   res.json({ mensaje: "Tarea eliminada correctamente" });
 });
 
