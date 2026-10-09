@@ -2,17 +2,175 @@
 <html lang="es">
 <head>
    <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
    <title>Gestor de Tareas API REST</title>
-   <style>body { font-family: Arial, sans-serif; margin: 40px; background: #f4f7f6; color: #333; }</style>
+   <style>
+      :root {
+         --bg: #eef2f7;
+         --card: #ffffff;
+         --text: #1f2937;
+         --muted: #6b7280;
+         --primary: #4f46e5;
+         --primary-hover: #4338ca;
+         --danger: #dc2626;
+         --danger-hover: #b91c1c;
+         --border: #e5e7eb;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+         font-family: "Segoe UI", Arial, sans-serif;
+         margin: 0;
+         min-height: 100vh;
+         display: flex;
+         justify-content: center;
+         align-items: flex-start;
+         padding: 48px 16px;
+         background: var(--bg);
+         color: var(--text);
+      }
+
+      .card {
+         width: 100%;
+         max-width: 480px;
+         background: var(--card);
+         border-radius: 12px;
+         padding: 28px 28px 32px;
+         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+      }
+
+      h1 {
+         font-size: 1.4rem;
+         margin: 0 0 4px;
+      }
+
+      .subtitle {
+         margin: 0 0 24px;
+         color: var(--muted);
+         font-size: 0.9rem;
+      }
+
+      .form-row {
+         display: flex;
+         gap: 8px;
+         margin-bottom: 12px;
+      }
+
+      input[type="text"] {
+         flex: 1;
+         padding: 10px 12px;
+         border: 1px solid var(--border);
+         border-radius: 8px;
+         font-size: 0.95rem;
+         outline: none;
+         transition: border-color 0.15s ease;
+      }
+
+      input[type="text"]:focus {
+         border-color: var(--primary);
+      }
+
+      button {
+         border: none;
+         border-radius: 8px;
+         padding: 10px 16px;
+         font-size: 0.9rem;
+         font-weight: 600;
+         cursor: pointer;
+         transition: background-color 0.15s ease, transform 0.05s ease;
+      }
+
+      button:active {
+         transform: scale(0.97);
+      }
+
+      .btn-primary {
+         background: var(--primary);
+         color: white;
+      }
+
+      .btn-primary:hover {
+         background: var(--primary-hover);
+      }
+
+      .btn-clear {
+         width: 100%;
+         background: transparent;
+         color: var(--danger);
+         border: 1px solid var(--danger);
+      }
+
+      .btn-clear:hover {
+         background: var(--danger);
+         color: white;
+      }
+
+      ul {
+         list-style: none;
+         padding: 0;
+         margin: 20px 0 0;
+         display: flex;
+         flex-direction: column;
+         gap: 8px;
+      }
+
+      li {
+         display: flex;
+         justify-content: space-between;
+         align-items: center;
+         gap: 10px;
+         padding: 10px 12px;
+         border: 1px solid var(--border);
+         border-radius: 8px;
+         font-size: 0.95rem;
+         animation: fade-in 0.15s ease;
+      }
+
+      li span {
+         word-break: break-word;
+      }
+
+      li button {
+         flex-shrink: 0;
+         background: #fee2e2;
+         color: var(--danger);
+         padding: 6px 10px;
+         font-size: 0.8rem;
+      }
+
+      li button:hover {
+         background: var(--danger);
+         color: white;
+      }
+
+      .vacio {
+         text-align: center;
+         color: var(--muted);
+         font-size: 0.9rem;
+         padding: 16px 0;
+      }
+
+      @keyframes fade-in {
+         from { opacity: 0; transform: translateY(-4px); }
+         to { opacity: 1; transform: translateY(0); }
+      }
+   </style>
 </head>
 <body>
-   <h1>Mi Gestor de Tareas (Consumiendo API REST)</h1>
+   <div class="card">
+      <h1>Mi Gestor de Tareas</h1>
+      <p class="subtitle">Consumiendo API REST (Express + PostgreSQL)</p>
 
-   <input type="text" id="inputTarea" placeholder="Escribe una nueva tarea...">
-   <button onclick="agregarTarea()">Agregar Tarea</button>
-   <button onclick="vaciarLista()">Vaciar Lista de Tareas</button>
+      <div class="form-row">
+         <input type="text" id="inputTarea" placeholder="Escribe una nueva tarea...">
+         <button class="btn-primary" onclick="agregarTarea()">Agregar</button>
+      </div>
 
-   <ul id="listaTareas"></ul>
+      <button class="btn-clear" onclick="vaciarLista()">Vaciar Lista de Tareas</button>
+
+      <ul id="listaTareas"></ul>
+   </div>
 
    <script>
       // Apuntamos al puerto expuesto de nuestra API
@@ -25,8 +183,15 @@
          const lista = document.getElementById('listaTareas');
          lista.innerHTML = '';
 
+         if (tareas.length === 0) {
+            lista.innerHTML = '<li class="vacio" style="border:none;">No hay tareas pendientes</li>';
+            return;
+         }
+
          tareas.forEach(t => {
-            lista.innerHTML += `<li>${t.texto} <button onclick="eliminarTarea(${t.id})">Eliminar</button></li>`;
+            const li = document.createElement('li');
+            li.innerHTML = `<span>${t.texto}</span> <button onclick="eliminarTarea(${t.id})">Eliminar</button>`;
+            lista.appendChild(li);
          });
       }
 
@@ -56,6 +221,11 @@
          await fetch(`${API_URL}/limpiar`, { method: 'DELETE' });
          cargarTareas(); // Refrescar la vista
       }
+
+      // Permite agregar presionando Enter
+      document.getElementById('inputTarea').addEventListener('keydown', (e) => {
+         if (e.key === 'Enter') agregarTarea();
+      });
 
       // Carga inicial
       cargarTareas();
